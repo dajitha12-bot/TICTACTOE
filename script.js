@@ -1,223 +1,175 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Comic Sans MS', cursive, sans-serif;
+// Game state
+const gameState = {
+    board: ['', '', '', '', '', '', '', '', ''],
+    currentPlayer: 'X',
+    gameActive: true,
+    scores: { X: 0, O: 0 },
+    winningCombinations: [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+        [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+        [0, 4, 8], [2, 4, 6]             // Diagonals
+    ]
+};
+
+// DOM elements
+const gameBoard = document.getElementById('game-board');
+const messageElement = document.getElementById('message');
+const restartButton = document.getElementById('restart-btn');
+const resetScoreButton = document.getElementById('reset-score-btn');
+const player1Info = document.getElementById('player1-info');
+const player2Info = document.getElementById('player2-info');
+const player1Score = document.getElementById('player1-score');
+const player2Score = document.getElementById('player2-score');
+
+// Initialize the game board
+function initializeBoard() {
+    gameBoard.innerHTML = '';
+    for (let i = 0; i < 9; i++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        cell.setAttribute('data-index', i);
+        cell.addEventListener('click', () => handleCellClick(i));
+        gameBoard.appendChild(cell);
+    }
 }
 
-body {
-    background: linear-gradient(135deg, #ffb6c1, #ffc0cb, #ffd1dc, #ffdae0);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    animation: backgroundPulse 8s infinite alternate;
+// Handle cell click
+function handleCellClick(index) {
+    if (gameState.board[index] !== '' || !gameState.gameActive) return;
+
+    // Update board state
+    gameState.board[index] = gameState.currentPlayer;
+    
+    // Update UI
+    const cell = document.querySelector(`.cell[data-index="${index}"]`);
+    cell.classList.add(gameState.currentPlayer.toLowerCase());
+    
+    // Check for win or draw
+    if (checkWin()) {
+        endGame(false);
+        createConfetti();
+    } else if (checkDraw()) {
+        endGame(true);
+    } else {
+        // Switch player
+        gameState.currentPlayer = gameState.currentPlayer === 'X' ? 'O' : 'X';
+        updateMessage();
+        updatePlayerInfo();
+    }
 }
 
-@keyframes backgroundPulse {
-    0% { background: linear-gradient(135deg, #ffb6c1, #ffc0cb, #ffd1dc, #ffdae0); }
-    100% { background: linear-gradient(135deg, #ffdae0, #ffd1dc, #ffc0cb, #ffb6c1); }
+// Check for win
+function checkWin() {
+    for (const combination of gameState.winningCombinations) {
+        const [a, b, c] = combination;
+        if (gameState.board[a] && 
+            gameState.board[a] === gameState.board[b] && 
+            gameState.board[a] === gameState.board[c]) {
+            
+            // Highlight winning cells
+            combination.forEach(index => {
+                document.querySelector(`.cell[data-index="${index}"]`).classList.add('winning-cell');
+            });
+            
+            return true;
+        }
+    }
+    return false;
 }
 
-.container {
-    max-width: 600px;
-    width: 100%;
-    text-align: center;
-    background: rgba(255, 255, 255, 0.8);
-    border-radius: 20px;
-    padding: 30px;
-    box-shadow: 0 10px 30px rgba(255, 105, 180, 0.3);
+// Check for draw
+function checkDraw() {
+    return gameState.board.every(cell => cell !== '');
 }
 
-h1 {
-    color: #ff69b4;
-    font-size: 3rem;
-    margin-bottom: 10px;
-    text-shadow: 3px 3px 0 #fff, 5px 5px 0 rgba(255, 105, 180, 0.3);
-    animation: bounce 2s infinite;
+// End the game
+function endGame(isDraw) {
+    gameState.gameActive = false;
+    
+    if (isDraw) {
+        messageElement.textContent = "It's a draw!";
+    } else {
+        messageElement.textContent = `Player ${gameState.currentPlayer === 'X' ? '1' : '2'} wins!`;
+        // Update score
+        gameState.scores[gameState.currentPlayer]++;
+        updateScoreDisplay();
+    }
 }
 
-@keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+// Update message
+function updateMessage() {
+    messageElement.textContent = `Player ${gameState.currentPlayer === 'X' ? '1' : '2'}'s turn!`;
 }
 
-.subtitle {
-    color: #ff1493;
-    font-size: 1.5rem;
-    margin-bottom: 30px;
-    text-shadow: 1px 1px 0 #fff;
+// Update player info
+function updatePlayerInfo() {
+    if (gameState.currentPlayer === 'X') {
+        player1Info.classList.add('active');
+        player2Info.classList.remove('active');
+    } else {
+        player2Info.classList.add('active');
+        player1Info.classList.remove('active');
+    }
 }
 
-.game-info {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 20px;
-    background: rgba(255, 255, 255, 0.9);
-    padding: 15px;
-    border-radius: 15px;
-    box-shadow: 0 5px 15px rgba(255, 105, 180, 0.3);
+// Update score display
+function updateScoreDisplay() {
+    player1Score.textContent = gameState.scores.X;
+    player2Score.textContent = gameState.scores.O;
 }
 
-.player-info {
-    flex: 1;
-    padding: 10px;
-    border-radius: 10px;
-    transition: all 0.3s;
+// Restart game
+function restartGame() {
+    gameState.board = ['', '', '', '', '', '', '', '', ''];
+    gameState.currentPlayer = 'X';
+    gameState.gameActive = true;
+    
+    initializeBoard();
+    updateMessage();
+    updatePlayerInfo();
+    
+    // Remove winning cell animations
+    document.querySelectorAll('.winning-cell').forEach(cell => {
+        cell.classList.remove('winning-cell');
+    });
 }
 
-.player-info.active {
-    background: rgba(255, 182, 193, 0.5);
-    transform: scale(1.05);
-    box-shadow: 0 0 15px rgba(255, 105, 180, 0.5);
+// Reset score
+function resetScore() {
+    gameState.scores = { X: 0, O: 0 };
+    updateScoreDisplay();
+    restartGame();
 }
 
-.player-name {
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: #ff1493;
+// Create confetti effect
+function createConfetti() {
+    for (let i = 0; i < 100; i++) {
+        const confetti = document.createElement('div');
+        confetti.classList.add('confetti');
+        confetti.style.left = Math.random() * 100 + 'vw';
+        confetti.style.backgroundColor = getRandomColor();
+        confetti.style.animationDelay = Math.random() * 5 + 's';
+        document.body.appendChild(confetti);
+        
+        // Remove confetti after animation
+        setTimeout(() => {
+            confetti.remove();
+        }, 5000);
+    }
 }
 
-.player-symbol {
-    font-size: 2rem;
-    margin: 5px 0;
+// Get random color for confetti
+function getRandomColor() {
+    const colors = ['#ff69b4', '#ff1493', '#87ceeb', '#ffb6c1', '#ffc0cb'];
+    return colors[Math.floor(Math.random() * colors.length)];
 }
 
-.score {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #ff69b4;
-}
+// Event listeners
+restartButton.addEventListener('click', restartGame);
+resetScoreButton.addEventListener('click', resetScore);
 
-.game-board {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-gap: 10px;
-    margin: 20px auto;
-    max-width: 400px;
-}
-
-.cell {
-    aspect-ratio: 1;
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 4rem;
-    cursor: pointer;
-    transition: all 0.3s;
-    box-shadow: 0 5px 10px rgba(255, 105, 180, 0.3);
-    position: relative;
-    overflow: hidden;
-}
-
-.cell:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(255, 105, 180, 0.4);
-    background: rgba(255, 255, 255, 1);
-}
-
-.cell.x::before, .cell.x::after {
-    content: '';
-    position: absolute;
-    width: 80%;
-    height: 10px;
-    background: #ff69b4;
-    border-radius: 5px;
-}
-
-.cell.x::before {
-    transform: rotate(45deg);
-}
-
-.cell.x::after {
-    transform: rotate(-45deg);
-}
-
-.cell.o::before {
-    content: '';
-    position: absolute;
-    width: 70%;
-    height: 70%;
-    border: 10px solid #87ceeb;
-    border-radius: 50%;
-}
-
-.winning-cell {
-    animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
-}
-
-.controls {
-    margin-top: 20px;
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-}
-
-button {
-    background: #ff69b4;
-    color: white;
-    border: none;
-    padding: 12px 25px;
-    font-size: 1.2rem;
-    border-radius: 50px;
-    cursor: pointer;
-    transition: all 0.3s;
-    box-shadow: 0 5px 15px rgba(255, 105, 180, 0.4);
-}
-
-button:hover {
-    background: #ff1493;
-    transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(255, 105, 180, 0.6);
-}
-
-button:active {
-    transform: translateY(1px);
-}
-
-.message {
-    margin-top: 20px;
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #ff1493;
-    min-height: 40px;
-    text-shadow: 1px 1px 0 #fff;
-    animation: fadeIn 0.5s;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.confetti {
-    position: fixed;
-    width: 10px;
-    height: 10px;
-    background: #ff69b4;
-    border-radius: 50%;
-    animation: confettiFall 5s linear forwards;
-    z-index: 1000;
-}
-
-@keyframes confettiFall {
-    0% { transform: translateY(-100px) rotate(0deg); opacity: 1; }
-    100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
-}
-
-@media (max-width: 500px) {
-    h1 { font-size: 2.2rem; }
-    .subtitle { font-size: 1.2rem; }
-    .cell { font-size: 3rem; }
-    button { padding: 10px 20px; font-size: 1rem; }
-}
+// Initialize the game when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    initializeBoard();
+    updateScoreDisplay();
+});
